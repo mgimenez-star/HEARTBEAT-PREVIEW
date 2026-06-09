@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heartbeat Ecosystem v19 — Polyphonic Harmonic Field</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#03040a;--panel:#080d18;--border:#1a2540;--accent:#00e5ff;--accent2:#ff3d6b;--accent3:#a8ff3e;--text:#c8d8f0;--muted:#4a6080;}
+body{background:var(--bg);color:var(--text);font-family:'Space Mono',monospace;overflow:hidden;height:100vh;width:100vw;min-width:640px}
+#app{display:grid;grid-template-columns:300px 1fr;height:100vh;gap:0}
+#sidebar{background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;z-index:10;min-width:300px}
+#canvas-area{position:relative;overflow:hidden;min-width:0}
+#sidebar-header{padding:16px 20px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+.proj-title{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;color:#fff;letter-spacing:-0.3px;line-height:1.2}
+.proj-sub{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:4px}
+.version-badge{display:inline-block;background:#0a1628;border:1px solid var(--accent);color:var(--accent);font-size:9px;padding:2px 7px;border-radius:3px;margin-top:6px;letter-spacing:1px}
+#signals{padding:12px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sig-label{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:7px}
+.sig-row{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+.sig-name{font-size:10px;color:var(--text);width:70px;flex-shrink:0}
+.sig-bar-wrap{flex:1;height:4px;background:#0d1525;border-radius:2px;overflow:hidden}
+.sig-bar{height:100%;border-radius:2px;transition:width 0.15s linear}
+.sig-bar.solar{background:linear-gradient(90deg,#ff9a00,#ffdd00)}
+.sig-bar.touch{background:linear-gradient(90deg,#00c8ff,#a8ff3e)}
+.sig-bar.pulse{background:linear-gradient(90deg,#ff3d6b,#ff9a00)}
+.sig-bar.sound{background:linear-gradient(90deg,#a855f7,#ec4899)}
+.sig-val{font-size:10px;width:42px;text-align:right;color:var(--accent)}
+#interaction-status{padding:8px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+.status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:middle}
+.status-dot.active{background:var(--accent3);box-shadow:0 0 8px var(--accent3)}
+.status-dot.inactive{background:var(--muted)}
+.status-line{font-size:10px;color:var(--text);margin-bottom:4px;display:flex;align-items:center}
+#solar-demo-wrap{padding:8px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+.demo-label{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:5px}
+.solar-slider-row{display:flex;align-items:center;gap:10px}
+#solarDemo{flex:1;height:6px;accent-color:#ffdd00;cursor:pointer}
+#solar-impact{margin-top:5px;padding:5px 9px;border-radius:4px;border:1px solid #332200;background:#1a1100;font-size:9px;color:#ffaa00;line-height:1.6;transition:all 0.4s}
+#solar-impact.bright{border-color:#665500;background:#2a1f00;color:#ffee44}
+
+/* KEYBOARD DISPLAY */
+#keyboard-display{padding:8px 20px;border-bottom:1px solid var(--border);flex-shrink:0;background:#06050f}
+.kbd-title{font-size:9px;letter-spacing:2px;color:#a855f7;text-transform:uppercase;margin-bottom:7px}
+#kbd-wrap{display:flex;gap:2px;align-items:flex-end;height:36px}
+.kbd-key{flex:1;border-radius:2px 2px 3px 3px;position:relative;cursor:default;transition:background 0.1s,height 0.1s}
+.kbd-key.white{background:#111827;border:1px solid #1f2937;height:36px}
+.kbd-key.black{background:#0a0f1a;border:1px solid #334155;height:24px;margin:0 -1px;z-index:2}
+.kbd-key.active-note{background:#a855f7!important;box-shadow:0 0 6px #a855f7}
+.kbd-key.solar-active{background:#ffdd00!important;box-shadow:0 0 8px #ffdd00}
+.kbd-note-label{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);font-size:6px;color:#4a6080;white-space:nowrap}
+
+/* SOUND ENGINE */
+.sound-title{font-size:9px;letter-spacing:2px;color:#a855f7;text-transform:uppercase;margin-bottom:8px}
+.sound-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.sound-label{font-size:9px;color:var(--muted);width:80px;flex-shrink:0}
+.sound-row input[type=range]{flex:1;height:3px;cursor:pointer}
+.sound-row input[type=range].purple{accent-color:#a855f7}
+.sound-row input[type=range].pink{accent-color:#ec4899}
+.sound-row input[type=range].yellow{accent-color:#ffdd00}
+.sound-val{font-size:10px;width:42px;text-align:right;color:#a855f7}
+#audioStartBtn{width:100%;background:#1a0a2e;border:1px solid #a855f7;color:#a855f7;font-family:'Space Mono',monospace;font-size:10px;padding:7px;border-radius:6px;cursor:pointer;transition:all 0.2s;letter-spacing:1px}
+#audioStartBtn.active{background:#0a2010;border-color:#a8ff3e;color:#a8ff3e}
+
+.scale-row{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:7px}
+.scale-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Space Mono',monospace;font-size:8px;padding:3px 5px;border-radius:3px;cursor:pointer;transition:all 0.15s}
+.scale-btn.active{border-color:#a855f7;color:#a855f7;background:#1a0a2e}
+
+#view-modes{padding:7px 20px;display:flex;gap:5px;flex-wrap:wrap;border-bottom:1px solid var(--border);flex-shrink:0}
+.mode-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Space Mono',monospace;font-size:9px;padding:3px 7px;border-radius:4px;cursor:pointer;transition:all 0.15s}
+.mode-btn.active{border-color:var(--accent);color:var(--accent);background:#001a20}
+#controls{padding:10px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+#sound-panel{padding:10px 20px;border-bottom:1px solid var(--border);flex-shrink:0;background:#06050f}
+#soundPanelBody{overflow:hidden;transition:max-height 0.3s ease}
+#soundPanelBody.collapsed{max-height:0!important}
+#soundPanelBody{overflow:hidden;transition:max-height 0.25s ease}
+#soundPanelBody.collapsed{max-height:0!important;overflow:hidden}.ctrl-section{margin-bottom:10px}
+.ctrl-title{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:7px}
+.ctrl-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:5px}
+.ctrl-item label{display:block;font-size:9px;color:var(--muted);margin-bottom:2px}
+.ctrl-item input[type=range]{width:100%;height:3px;accent-color:var(--accent);cursor:pointer}
+.ctrl-item input[type=number]{width:100%;background:#0a1020;border:1px solid var(--border);color:var(--text);font-family:'Space Mono',monospace;font-size:10px;padding:3px 6px;border-radius:4px}
+.ctrl-item input[type=number]:focus{outline:none;border-color:var(--accent)}
+#stats{padding:8px 20px;flex-shrink:0}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.stat{background:#060c18;border:1px solid var(--border);border-radius:6px;padding:5px 8px}
+.stat-k{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.stat-v{font-size:13px;font-weight:700;font-family:'Syne',sans-serif;color:#fff;margin-top:1px}
+.stat-v.hi{color:var(--accent)}
+.stat-v.pulse-col{color:var(--accent2)}
+.stat-v.sound-col{color:#a855f7}
+#btn-row{padding:8px 20px;display:flex;gap:8px;border-top:1px solid var(--border);flex-shrink:0}
+.btn{flex:1;background:transparent;border:1px solid var(--border);color:var(--text);font-family:'Space Mono',monospace;font-size:10px;padding:6px;border-radius:6px;cursor:pointer;transition:all 0.15s}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{border-color:#1a6b2a;color:var(--accent3)}
+#touch-ring{position:absolute;pointer-events:none;border-radius:50%;border:1.5px solid rgba(0,229,255,0.7);transform:translate(-50%,-50%);transition:opacity 0.3s;opacity:0;z-index:5}
+#solar-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4;transition:opacity 0.3s}
+#ws-status{position:absolute;bottom:14px;right:14px;font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;z-index:10;background:rgba(3,4,10,0.8);padding:5px 9px;border-radius:4px;border:1px solid var(--border)}
+#ws-status.connected{color:var(--accent3);border-color:var(--accent3)}
+#interaction-hint{position:absolute;bottom:14px;left:14px;font-family:'Space Mono',monospace;font-size:9px;color:rgba(200,216,240,0.4);letter-spacing:0.5px;z-index:10;pointer-events:none}
+#sonic-canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:3;opacity:0.5}
+canvas#simCanvas{display:block;width:100%;height:100%;image-rendering:pixelated}
+#sidebar::-webkit-scrollbar{width:4px}
+#sidebar::-webkit-scrollbar-track{background:transparent}
+#sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+#controls::-webkit-scrollbar{width:4px}
+#controls::-webkit-scrollbar-track{background:transparent}
+#controls::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <div class="proj-title">Heartbeat Ecosystem</div>
+      <div class="proj-sub">Chromatic Harmonic Field · Artlab BA</div>
+      <div class="version-badge">v21 · Círculo de Quintas</div>
+    </div>
+
+    <div id="signals">
+      <div class="sig-label">Live signals</div>
+      <div class="sig-row"><span class="sig-name">☀ Solar cell</span><div class="sig-bar-wrap"><div class="sig-bar solar" id="barSolar" style="width:0%"></div></div><span class="sig-val" id="valSolar">0.00</span></div>
+      <div class="sig-row"><span class="sig-name">✦ Touch</span><div class="sig-bar-wrap"><div class="sig-bar touch" id="barTouch" style="width:0%"></div></div><span class="sig-val" id="valTouch">—</span></div>
+      <div class="sig-row"><span class="sig-name">♥ Pulse</span><div class="sig-bar-wrap"><div class="sig-bar pulse" id="barPulse" style="width:50%"></div></div><span class="sig-val" id="valPulse">0.00</span></div>
+      <div class="sig-row"><span class="sig-name">♪ Hz avg</span><div class="sig-bar-wrap"><div class="sig-bar sound" id="barSound" style="width:0%"></div></div><span class="sig-val" id="valSound">—</span></div>
+    </div>
+
+    <div id="interaction-status">
+      <div class="status-line"><span class="status-dot inactive" id="dotTouch"></span><span id="lblTouch">No touch detected</span></div>
+      <div class="status-line"><span class="status-dot inactive" id="dotSolar"></span><span id="lblSolar">Solar cell: simulated</span></div>
+      <div class="status-line"><span class="status-dot inactive" id="dotAudio"></span><span id="lblAudio">Audio: stopped</span></div>
+    </div>
+
+    <div id="solar-demo-wrap">
+      <div class="demo-label">☀ Solar cell — arrastrá</div>
+      <div class="solar-slider-row">
+        <input type="range" id="solarDemo" min="0" max="100" value="0" step="1">
+        <span class="sig-val" id="valSolarDemo">0%</span>
+      </div>
+      <div id="solar-impact">Oscuro → octavas graves · filtro cerrado</div>
+    </div>
+
+    <!-- KEYBOARD VISUALIZER -->
+    <div id="keyboard-display">
+      <div class="kbd-title">♪ Notas activas en tiempo real</div>
+      <div id="kbd-wrap"></div>
+    </div>
+
+    <!-- SOUND ENGINE -->
+    <div id="sound-panel">
+      <div class="sound-title" id="soundPanelToggle" style="cursor:pointer;user-select:none">
+        Synth — Círculo de Quintas <span id="soundToggleArrow" style="float:right">▲</span>
+      </div>
+      <div id="soundPanelBody">
+      <button id="audioStartBtn">▶ ACTIVAR AUDIO (A)</button>
+      <div style="margin-top:8px">
+        <div style="font-size:8px;color:var(--muted);margin-bottom:5px;letter-spacing:1px">ESCALA</div>
+        <div class="scale-row" id="scaleRow">
+          <button class="scale-btn active" data-scale="chromatic">Cromática</button>
+          <button class="scale-btn" data-scale="minor">La menor</button>
+          <button class="scale-btn" data-scale="major">Do mayor</button>
+          <button class="scale-btn" data-scale="penta">Pentatónica</button>
+        </div>
+        <div class="sound-row"><span class="sound-label">Master vol</span><input type="range" class="purple" id="masterVol" min="0" max="100" value="70" step="1"><span class="sound-val" id="valMasterVol">70%</span></div>
+        <div class="sound-row"><span class="sound-label">Octava min</span><input type="range" class="purple" id="octMin" min="1" max="6" value="2" step="1"><span class="sound-val" id="valOctMin">C2</span></div>
+        <div class="sound-row"><span class="sound-label">Octava max</span><input type="range" class="purple" id="octMax" min="2" max="8" value="7" step="1"><span class="sound-val" id="valOctMax">C7</span></div>
+        <div class="sound-row"><span class="sound-label">Voces</span><input type="range" class="pink" id="voiceCount" min="4" max="64" value="32" step="1"><span class="sound-val" id="valVoiceCount">32</span></div>
+        <div class="sound-row"><span class="sound-label">Detune pad</span><input type="range" class="pink" id="detuneAmt" min="0" max="40" value="6" step="1"><span class="sound-val" id="valDetuneAmt">6¢</span></div>
+        <div class="sound-row"><span class="sound-label">Solar boost</span><input type="range" class="yellow" id="solarSoundBoost" min="1" max="10" value="5" step="0.5"><span class="sound-val" id="valSolarSoundBoost">5×</span></div>
+        <div class="sound-row"><span class="sound-label">LFO rate</span><input type="range" class="purple" id="lfoRate" min="0.05" max="3" value="0.2" step="0.05"><span class="sound-val" id="valLfoRate">0.20</span></div>
+        <div class="sound-row"><span class="sound-label">Reverb</span><input type="range" class="pink" id="reverbMix" min="0" max="100" value="45" step="1"><span class="sound-val" id="valReverbMix">45%</span></div>
+      </div>
+      </div><!-- end soundPanelBody -->
+    </div>
+
+    <div id="view-modes">
+      <button class="mode-btn active" data-mode="density">Density</button>
+      <button class="mode-btn" data-mode="energy">Energy</button>
+      <button class="mode-btn" data-mode="organic">Organic</button>
+      <button class="mode-btn" data-mode="lineage">Lineage</button>
+      <button class="mode-btn" data-mode="height">Height</button>
+    </div>
+
+    <div id="controls">
+      <div class="ctrl-section">
+        <div class="ctrl-title">Ecosystem</div>
+        <div class="ctrl-row">
+          <div class="ctrl-item"><label>Agents <span id="labAgents"></span></label><input id="agents" type="range" min="40" max="3000" step="20" value="1200"/></div>
+          <div class="ctrl-item"><label>Grid <span id="labGrid"></span></label><input id="grid" type="range" min="100" max="320" step="10" value="180"/></div>
+        </div>
+        <div class="ctrl-row">
+          <div class="ctrl-item"><label>Cycles/frame <span id="labCycles"></span></label><input id="cycles" type="range" min="1" max="30" step="1" value="3"/></div>
+          <div class="ctrl-item"><label>Render every</label><input id="renderEvery" type="number" min="1" max="100" value="8"/></div>
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Heartbeat</div>
+        <div class="ctrl-row">
+          <div class="ctrl-item"><label>Period T</label><input id="period" type="number" min="100" max="6000" step="50" value="1200"/></div>
+          <div class="ctrl-item"><label>Amplitude</label><input id="amplitude" type="number" min="0" max="1.2" step="0.05" value="0.45"/></div>
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Energy</div>
+        <div class="ctrl-row">
+          <div class="ctrl-item"><label>Basal cost</label><input id="basal" type="number" min="0.01" max="1" step="0.01" value="0.08"/></div>
+          <div class="ctrl-item"><label>Solar gain</label><input id="gain" type="number" min="0.05" max="2" step="0.01" value="0.80"/></div>
+        </div>
+        <div class="ctrl-row">
+          <div class="ctrl-item"><label>Organic uptake</label><input id="organicUptake" type="number" min="0" max="1" step="0.01" value="0.08"/></div>
+          <div class="ctrl-item"><label>Density penalty</label><input id="densityPenalty" type="number" min="0" max="1" step="0.01" value="0.06"/></div>
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Reproduction</div>
+        <div class="ctrl-row">
+          <div class="ctrl-item"><label>Max pop</label><input id="maxpop" type="number" min="200" max="500000" step="100" value="50000"/></div>
+          <div class="ctrl-item"><label>Conception p</label><input id="baseConception" type="number" min="0.0001" max="0.2" step="0.0001" value="0.0020"/></div>
+        </div>
+        <div class="ctrl-row">
+          <div class="ctrl-item"><label>Mating radius</label><input id="matingRadius" type="number" min="1" max="12" step="0.5" value="3"/></div>
+          <div class="ctrl-item"><label>Gestation</label><input id="gestation" type="number" min="10" max="5000" step="10" value="320"/></div>
+        </div>
+        <div class="ctrl-row">
+          <div class="ctrl-item"><label>Preg. cost</label><input id="pregCost" type="number" min="0" max="100" step="1" value="16"/></div>
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Interaction</div>
+        <div class="ctrl-row">
+          <div class="ctrl-item"><label>Attractor str</label><input id="attractorStr" type="number" min="0" max="3" step="0.1" value="0.8"/></div>
+          <div class="ctrl-item"><label>Solar boost ×</label><input id="solarBoostMult" type="number" min="0" max="5" step="0.1" value="2.0"/></div>
+        </div>
+        <div class="ctrl-row">
+          <div class="ctrl-item"><label>Attractor radius</label><input id="attractorRadius" type="number" min="1" max="60" step="1" value="20"/></div>
+          <div class="ctrl-item"><label>Repulse on hold</label><input id="repulseOnHold" type="number" min="0" max="1" step="1" value="0"/></div>
+        </div>
+        <div class="ctrl-row">
+          <div class="ctrl-item"><label>Touch energy ↑</label><input id="touchEnergyInject" type="number" min="0" max="20" step="0.5" value="3"/></div>
+          <div class="ctrl-item"><label style="color:#a855f7">→ sube nota</label></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="stats">
+      <div class="stats-grid">
+        <div class="stat"><div class="stat-k">Tick</div><div class="stat-v" id="tickStat">0</div></div>
+        <div class="stat"><div class="stat-k">Alive</div><div class="stat-v hi" id="aliveStat">0</div></div>
+        <div class="stat"><div class="stat-k">Births</div><div class="stat-v" id="birthStat">0</div></div>
+        <div class="stat"><div class="stat-k">Deaths</div><div class="stat-v" id="deathStat">0</div></div>
+        <div class="stat"><div class="stat-k">Avg energy</div><div class="stat-v" id="energyStat">0</div></div>
+        <div class="stat"><div class="stat-k">Pulse</div><div class="stat-v pulse-col" id="pulseStat">0</div></div>
+        <div class="stat"><div class="stat-k">Nota central</div><div class="stat-v sound-col" id="avgNoteStat">—</div></div>
+        <div class="stat"><div class="stat-k">Voces act</div><div class="stat-v sound-col" id="voicesStat">0</div></div>
+      </div>
+    </div>
+    <div id="btn-row">
+      <button class="btn" id="pauseBtn">Pause</button>
+      <button class="btn primary" id="restartBtn">Restart</button>
+      <button class="btn" id="snapshotBtn">PNG</button>
+    </div>
+  </div>
+
+  <div id="canvas-area">
+    <canvas id="simCanvas"></canvas>
+    <canvas id="sonic-canvas"></canvas>
+    <div id="touch-ring"></div>
+    <div id="solar-overlay"></div>
+    <div id="ws-status">WS: disconnected</div>
+    <div id="interaction-hint">Cursor sobre agentes → ↑ energía → ↑ frecuencia · Solar → sube octavas · A = audio · 1-5 vistas</div>
+  </div>
+</div>
+
+<script>
+(()=>{
+// ══ CANVAS ══
+const canvasArea=document.getElementById("canvas-area");
+const canvas=document.getElementById("simCanvas");
+const sonicCanvas=document.getElementById("sonic-canvas");
+const ctx=canvas.getContext("2d",{alpha:false});
+const sctx=sonicCanvas.getContext("2d");
+const touchRing=document.getElementById("touch-ring");
+const solarOverlay=document.getElementById("solar-overlay");
+const wsStatus=document.getElementById("ws-status");
+function resizeCanvas(){canvas.width=canvasArea.clientWidth;canvas.height=canvasArea.clientHeight;sonicCanvas.width=canvasArea.clientWidth;sonicCanvas.height=canvasArea.clientHeight;}
+resizeCanvas();window.addEventListener("resize",resizeCanvas);
+let externalSolarBoost=0,attractorX=-1,attractorY=-1,attractorActive=false,holdTimer=0;
+
+// ══ CHROMATIC FREQUENCY TABLE ══
+// C0 = 16.35 Hz. Each semitone = *2^(1/12)
+// Note names for display
+const NOTE_NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const BLACK_KEYS=[1,3,6,8,10]; // C# D# F# G# A#
+
+function midiToFreq(midi){return 440*Math.pow(2,(midi-69)/12);}
+function freqToMidi(f){return Math.round(69+12*Math.log2(f/440));}
+function midiToName(midi){const oct=Math.floor(midi/12)-1;const note=NOTE_NAMES[midi%12];return note+oct;}
+
+// Scales as semitone intervals from root C
+const SCALES={
+  chromatic:[0,1,2,3,4,5,6,7,8,9,10,11],
+  minor:    [0,2,3,5,7,8,10],      // natural minor
+  major:    [0,2,4,5,7,9,11],      // major
+  penta:    [0,3,5,7,10]           // minor pentatonic
+};
+let currentScale='chromatic';
+
+// Given energy 0–1, octave range, and solar shift → MIDI note
+function energyToMidi(eNorm, octMin, octMax, solarOctaveBonus){
+  const scale=SCALES[currentScale];
+  const degCount=scale.length;
+  // total semitone span: from C(octMin) to C(octMax)
+  const midiMin=(octMin+1)*12; // C1 = midi 24, etc.
+  const midiMax=(octMax+1)*12;
+  const span=midiMax-midiMin;
+  // map energy linearly to span
+  const rawSemitone=Math.round(eNorm*span);
+  const absoluteSemitone=midiMin+rawSemitone;
+  // quantize to nearest scale degree
+  const rootOct=Math.floor(absoluteSemitone/12);
+  const semInOct=absoluteSemitone%12;
+  // find nearest scale degree
+  let nearest=scale[0], minDist=12;
+  for(const s of scale){
+    const dist=Math.min(Math.abs(semInOct-s),12-Math.abs(semInOct-s));
+    if(dist<minDist){minDist=dist;nearest=s;}
+  }
+  let midi=rootOct*12+nearest;
+  // solar shifts entire spectrum up by octaves
+  midi+=Math.round(solarOctaveBonus);
+  return Math.max(24,Math.min(108,midi)); // C2–C8
+}
+
+// ══ KEYBOARD DISPLAY ══
+const kbdWrap=document.getElementById("kbd-wrap");
+// build 2 octaves of keys (C3–B4) for display
+const KBD_OCTAVES=3,KBD_START=36; // C2
+const KBD_NOTES=KBD_OCTAVES*12;
+const kbdKeys=[];
+for(let i=0;i<KBD_NOTES;i++){
+  const midi=KBD_START+i;
+  const semInOct=midi%12;
+  const isBlack=BLACK_KEYS.includes(semInOct);
+  const el=document.createElement("div");
+  el.className="kbd-key "+(isBlack?"black":"white");
+  if(!isBlack&&semInOct===0){
+    const lbl=document.createElement("span");
+    lbl.className="kbd-note-label";
+    lbl.textContent="C"+(Math.floor(midi/12)-1);
+    el.appendChild(lbl);
+  }
+  kbdWrap.appendChild(el);
+  kbdKeys.push({el,midi,isBlack});
+}
+const activeNotes=new Set();
+function updateKeyboard(noteCounts){
+  // noteCounts: Map midi→count
+  kbdKeys.forEach(k=>{
+    const count=noteCounts.get(k.midi)||0;
+    const isSolar=externalSolarBoost>0.5;
+    if(count>0){
+      k.el.classList.add(isSolar?"solar-active":"active-note");
+      k.el.classList.remove(isSolar?"active-note":"solar-active");
+    } else {
+      k.el.classList.remove("active-note","solar-active");
+    }
+  });
+}
+
+// ══ WEB AUDIO — CÍRCULO DE QUINTAS ══
+let audioCtx=null,masterGain=null,reverbNode=null,reverbDry=null,reverbWet=null;
+let lfoNode=null,lfoGain=null,analyser=null,analyserData=null;
+let voices=[];
+let audioRunning=false;
+
+// ── Círculo de quintas ──
+const COQ_NOTES=['C','G','D','A','E','B','F#','C#','G#','D#','A#','F'];
+const COQ_BASE=[261.63,392.00,293.66,440.00,329.63,493.88,369.99,277.18,415.30,311.13,466.16,349.23];
+const SMAJ=[0,2,4,5,7,9,11];
+const SMIN=[0,2,3,5,7,8,10];
+const SPENTA=[0,2,4,7,9];
+const SMIXO=[0,2,4,5,7,9,10];
+let coqTonic=0,coqSmooth=0,coqScale=SMAJ;
+let dispersSmooth=0;
+
+function computeDisp(){
+  if(!state.densityField||!state.aliveCount)return 0.5;
+  const g=state.gridSize;
+  let td=0,cx=0,cy=0;
+  for(let y=0;y<g;y+=4)for(let x=0;x<g;x+=4){const d=state.densityField[y*g+x];if(d>0.1){td+=d;cx+=x*d;cy+=y*d;}}
+  if(td<0.01)return 0.5;
+  cx/=td;cy/=td;
+  let vs=0,vn=0;
+  for(let y=0;y<g;y+=4)for(let x=0;x<g;x+=4){const d=state.densityField[y*g+x];if(d>0.1){vs+=d*Math.hypot(x-cx,y-cy);vn+=d;}}
+  return Math.max(0,Math.min(1,vs/vn/(g*0.45)));
+}
+
+function snapToScale(freq,oct){
+  let best=freq,bd=Infinity;
+  for(const semi of coqScale){
+    for(let o=oct-1;o<=oct+1;o++){
+      const f=COQ_BASE[coqTonic]*Math.pow(2,o-4)*Math.pow(2,semi/12);
+      const d=Math.abs(Math.log2(freq/f));
+      if(d<bd){bd=d;best=f;}
+    }
+  }
+  return best;
+}
+
+function makeReverb(actx,dur=3.0,decay=2.2){
+  const sr=actx.sampleRate,len=Math.floor(sr*dur);
+  const buf=actx.createBuffer(2,len,sr);
+  for(let c=0;c<2;c++){const d=buf.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,decay);}
+  const conv=actx.createConvolver();conv.buffer=buf;return conv;
+}
+
+function initAudio(){
+  if(audioCtx)return;
+  audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  masterGain=audioCtx.createGain();masterGain.gain.value=0.75;
+  const comp=audioCtx.createDynamicsCompressor();
+  comp.threshold.value=-14;comp.knee.value=5;comp.ratio.value=3.5;comp.attack.value=0.003;comp.release.value=0.12;
+  masterGain.connect(comp);comp.connect(audioCtx.destination);
+  reverbNode=makeReverb(audioCtx);
+  reverbDry=audioCtx.createGain();reverbDry.gain.value=0.55;
+  reverbWet=audioCtx.createGain();reverbWet.gain.value=0.45;
+  masterGain.connect(reverbDry);masterGain.connect(reverbNode);
+  reverbNode.connect(reverbWet);
+  reverbDry.connect(comp);reverbWet.connect(comp);
+  analyser=audioCtx.createAnalyser();analyser.fftSize=512;
+  analyserData=new Uint8Array(analyser.frequencyBinCount);
+  masterGain.connect(analyser);
+  lfoNode=audioCtx.createOscillator();lfoNode.type='sine';lfoNode.frequency.value=0.2;
+  lfoGain=audioCtx.createGain();lfoGain.gain.value=5;
+  lfoNode.connect(lfoGain);lfoNode.start();
+  buildVoicePool(parseInt(document.getElementById('voiceCount').value)||32);
+  audioRunning=true;
+  document.getElementById('audioStartBtn').textContent='■ AUDIO ACTIVO';
+  document.getElementById('audioStartBtn').classList.add('active');
+  document.getElementById('dotAudio').className='status-dot active';
+  document.getElementById('lblAudio').textContent='Audio: running';
+}
+
+function buildVoicePool(n){
+  for(const v of voices){try{v.oscs.forEach(o=>o.stop());}catch(e){}}
+  voices=[];
+  const nB=Math.max(1,Math.floor(n*0.25));
+  const nP=Math.max(1,Math.floor(n*0.35));
+  const nM=Math.max(1,Math.floor(n*0.25));
+  const nT=Math.max(1,n-nB-nP-nM);
+
+  function mkVoice(role,w1,w2,hr,panV,rvSend){
+    const o1=audioCtx.createOscillator();o1.type=w1;o1.frequency.value=220;
+    const o2=audioCtx.createOscillator();o2.type=w2;o2.frequency.value=220*hr;
+    const hg=audioCtx.createGain();hg.gain.value=0.22;
+    const filt=audioCtx.createBiquadFilter();
+    filt.type=role==='bass'?'lowpass':role==='texture'?'bandpass':'lowpass';
+    filt.frequency.value=role==='bass'?400:role==='melody'?3000:1200;
+    filt.Q.value=role==='texture'?6:1.5;
+    const gain=audioCtx.createGain();gain.gain.value=0;
+    const pan=audioCtx.createStereoPanner();pan.pan.value=panV;
+    const lfo2=audioCtx.createOscillator();lfo2.type='sine';
+    lfo2.frequency.value=0.15+Math.random()*0.3;
+    const lg=audioCtx.createGain();lg.gain.value=role==='pad'?5:1.5;
+    lfo2.connect(lg);lg.connect(o1.detune);
+    o1.connect(filt);o2.connect(hg);hg.connect(filt);
+    filt.connect(gain);gain.connect(pan);
+    pan.connect(masterGain);
+    if(rvSend)pan.connect(reverbNode);
+    o1.start();o2.start();lfo2.start();
+    return{role,oscs:[o1,o2],lfo:lfo2,lfoG:lg,filter:filt,gain,pan,harmGain:hg,harmRatio:hr,agentId:-1,prevFreq:-1,prevEnergy:-1};
+  }
+
+  for(let i=0;i<nB;i++) voices.push(mkVoice('bass','sawtooth','sine',0.5,(i/(nB-1||1)-0.5)*0.4,false));
+  for(let i=0;i<nP;i++) voices.push(mkVoice('pad','triangle','triangle',[1.5,1.25,1.333,2][i%4],(i/(nP-1||1))*2-1,true));
+  for(let i=0;i<nM;i++) voices.push(mkVoice('melody','sine','sine',2,(i/(nM-1||1))*2-1,true));
+  for(let i=0;i<nT;i++) voices.push(mkVoice('texture','sawtooth','sawtooth',1+((i*7+3)%11)*0.05,(Math.random()*2-1)*0.9,true));
+}
+
+function updateVoices(){
+  if(!audioCtx||!audioRunning)return;
+  const now=audioCtx.currentTime;
+  const s=externalSolarBoost;
+  const solarBoost=parseFloat(document.getElementById('solarSoundBoost').value)||5;
+  const octMin=parseInt(document.getElementById('octMin').value)||2;
+  const octMax=parseInt(document.getElementById('octMax').value)||6;
+  const vol=parseInt(document.getElementById('masterVol').value)/100;
+  const detuneAmt=parseFloat(document.getElementById('detuneAmt').value)||6;
+  const lfoRate=parseFloat(document.getElementById('lfoRate').value)||0.2;
+  const reverbMix=parseInt(document.getElementById('reverbMix').value)/100||0.45;
+  const solarOctaveBonus=s*3*solarBoost/5;
+
+  masterGain.gain.setTargetAtTime(vol*(1+s*0.35),now,0.06);
+  reverbWet.gain.setTargetAtTime(reverbMix,now,0.2);
+  reverbDry.gain.setTargetAtTime(1-reverbMix,now,0.2);
+  lfoNode.frequency.setTargetAtTime(lfoRate*(1+s*2),now,0.2);
+
+  // ── Tónica: energía promedio → círculo de quintas ──
+  const avgE=state.avgEnergy||50;
+  const target=Math.floor(Math.max(0,Math.min(11,(avgE-20)/12)));
+  coqSmooth+=(target-coqSmooth)*0.003;
+  coqTonic=Math.round(coqSmooth)%12;
+
+  // ── Geometría → escala ──
+  const disp=computeDisp();
+  dispersSmooth+=(disp-dispersSmooth)*0.05;
+  if(s>0.7)          coqScale=SMIXO;
+  else if(disp<0.25) coqScale=SMAJ;
+  else if(disp<0.55) coqScale=s>0.3?SMIXO:SPENTA;
+  else               coqScale=SMIN;
+
+  // ── Selección de agentes ──
+  const alive=[];
+  for(const a of state.agents)if(a.alive)alive.push(a);
+  const aRad=Number(document.getElementById('attractorRadius').value)*3;
+  if(attractorActive&&attractorX>=0){
+    alive.sort((a,b)=>{
+      const da=Math.hypot(a.x-attractorX,a.y-attractorY);
+      const db=Math.hypot(b.x-attractorX,b.y-attractorY);
+      return da<aRad&&db>=aRad?-1:db<aRad&&da>=aRad?1:da<aRad?da-db:b.energy-a.energy;
+    });
+  } else {
+    alive.sort((a,b)=>b.energy-a.energy);
+  }
+
+  const bassV=voices.filter(v=>v.role==='bass');
+  const padV=voices.filter(v=>v.role==='pad');
+  const melV=voices.filter(v=>v.role==='melody');
+  const texV=voices.filter(v=>v.role==='texture');
+  const nB=bassV.length,nP=padV.length,nM=melV.length,nT=texV.length;
+  const bassA=alive.slice(Math.max(0,alive.length-nB));
+  const melA=alive.slice(0,nM);
+  const padA=alive.slice(nM,nM+nP);
+  const texA=alive.filter((_,i)=>i%(Math.max(1,Math.floor(alive.length/(nT||1))))==0).slice(0,nT);
+  const g=state.gridSize;
+  const noteCounts=new Map();
+
+  // BAJO
+  bassV.forEach((v,i)=>{
+    const a=bassA[i];
+    if(!a){v.gain.gain.setTargetAtTime(0,now,0.25);return;}
+    const eN=Math.max(0,Math.min(1,(a.energy-5)/130));
+    const oct=octMin+Math.floor(eN*(octMax-octMin)*0.4);
+    const semi=(a.lineage%2===0)?0:7;
+    const freq=snapToScale(COQ_BASE[coqTonic]*Math.pow(2,oct-4)*Math.pow(2,semi/12),oct);
+    v.oscs[0].frequency.setTargetAtTime(freq,now,0.15);
+    v.oscs[1].frequency.setTargetAtTime(freq*v.harmRatio,now,0.15);
+    v.filter.frequency.setTargetAtTime(Math.max(80,Math.min(1800,200+eN*400+s*300)),now,0.15);
+    v.pan.pan.setTargetAtTime(Math.max(-1,Math.min(1,(a.x/g)*2-1)),now,0.2);
+    v.gain.gain.setTargetAtTime((0.05+eN*0.04)*(1+state.pulseValue*0.3)*(1+s*0.2),now,0.15);
+    v.agentId=a.id;v.prevEnergy=a.energy;
+    const m=Math.round(69+Math.log2(freq/440)*12);
+    noteCounts.set(Math.max(KBD_START,Math.min(KBD_START+KBD_NOTES-1,m)),(noteCounts.get(m)||0)+1);
+  });
+
+  // PAD
+  padV.forEach((v,i)=>{
+    const a=padA[i];
+    if(!a){v.gain.gain.setTargetAtTime(0,now,0.35);return;}
+    const eN=Math.max(0,Math.min(1,(a.energy-5)/130));
+    const oct=octMin+Math.floor(eN*(octMax-octMin)*0.7);
+    const lp=(a.lineage*7)%12;
+    const si=coqScale[lp%coqScale.length];
+    const freq=snapToScale(COQ_BASE[coqTonic]*Math.pow(2,oct-4)*Math.pow(2,si/12),oct);
+    const jump=v.prevEnergy>=0?a.energy-v.prevEnergy:0;
+    const gl=jump>2?0.04:jump<-2?0.25:0.14;
+    v.oscs[0].frequency.setTargetAtTime(freq,now,gl);
+    v.oscs[1].frequency.setTargetAtTime(freq*v.harmRatio,now,gl);
+    v.oscs[0].detune.setTargetAtTime(detuneAmt*(i%2===0?1:-1),now,0.1);
+    v.lfo.frequency.setTargetAtTime(lfoRate*(1+dispersSmooth*2.5),now,0.2);
+    v.lfoG.gain.setTargetAtTime(5+dispersSmooth*14,now,0.15);
+    v.filter.frequency.setTargetAtTime(Math.max(200,Math.min(5000,600+eN*1500+s*600)),now,0.12);
+    v.pan.pan.setTargetAtTime(Math.max(-1,Math.min(1,(a.x/g)*2-1)),now,0.18);
+    v.gain.gain.setTargetAtTime((0.018+eN*0.016)*(1+s*0.3)*(1+state.pulseValue*0.15),now,0.15);
+    v.agentId=a.id;v.prevEnergy=a.energy;
+    const m=Math.round(69+Math.log2(freq/440)*12);
+    noteCounts.set(Math.max(KBD_START,Math.min(KBD_START+KBD_NOTES-1,m)),(noteCounts.get(m)||0)+1);
+  });
+
+  // MELODÍA
+  melV.forEach((v,i)=>{
+    const a=melA[i];
+    if(!a){v.gain.gain.setTargetAtTime(0,now,0.1);return;}
+    const eN=Math.max(0,Math.min(1,(a.energy-5)/130));
+    const octLow=octMin+Math.floor((octMax-octMin)*0.5);
+    const oct=octLow+Math.floor(eN*(octMax-octLow));
+    const si=coqScale[Math.floor(eN*(coqScale.length-1))];
+    const freq=snapToScale(COQ_BASE[coqTonic]*Math.pow(2,oct-4)*Math.pow(2,si/12),oct);
+    const jump=v.prevEnergy>=0?a.energy-v.prevEnergy:0;
+    const gl=jump>3?0.008:0.06;
+    v.oscs[0].frequency.setTargetAtTime(freq,now,gl);
+    v.oscs[1].frequency.setTargetAtTime(freq*2,now,gl);
+    v.filter.frequency.setTargetAtTime(Math.max(400,Math.min(8000,800+eN*2500+s*800)),now,0.06);
+    v.pan.pan.setTargetAtTime(Math.max(-1,Math.min(1,(a.x/g)*2-1)),now,0.08);
+    let amp=0.010+eN*0.016;
+    if(attractorActive&&attractorX>=0){
+      const d=Math.hypot(a.x-attractorX,a.y-attractorY);
+      if(d<aRad)amp*=(1+(1-d/aRad)*5);
+    }
+    amp*=(1+s*0.5)*(1+state.pulseValue*0.3);
+    if(v.prevFreq>0&&Math.abs(freq-v.prevFreq)>5){
+      v.gain.gain.cancelScheduledValues(now);
+      v.gain.gain.setValueAtTime(jump>3?amp*0.6:0,now);
+      v.gain.gain.linearRampToValueAtTime(amp,now+(jump>3?0.006:0.03));
+    } else {
+      v.gain.gain.setTargetAtTime(amp,now,0.05);
+    }
+    v.agentId=a.id;v.prevFreq=freq;v.prevEnergy=a.energy;
+    const m=Math.round(69+Math.log2(freq/440)*12);
+    noteCounts.set(Math.max(KBD_START,Math.min(KBD_START+KBD_NOTES-1,m)),(noteCounts.get(m)||0)+1);
+  });
+
+  // TEXTURA
+  texV.forEach((v,i)=>{
+    const a=texA[i];
+    if(!a){v.gain.gain.setTargetAtTime(0,now,0.3);return;}
+    const eN=Math.max(0,Math.min(1,(a.energy-5)/130));
+    const oct=octMin+Math.floor(eN*(octMax-octMin));
+    const si=coqScale[i%coqScale.length];
+    const base=COQ_BASE[coqTonic]*Math.pow(2,oct-4)*Math.pow(2,si/12);
+    const det=disp<0.25?(i%2===0?1:-1)*5:(i%2===0?1:-1)*dispersSmooth*28;
+    v.oscs[0].frequency.setTargetAtTime(base,now,0.2);
+    v.oscs[0].detune.setTargetAtTime(det,now,0.1);
+    v.filter.frequency.setTargetAtTime(Math.max(100,Math.min(3000,300+eN*600+dispersSmooth*400)),now,0.15);
+    v.gain.gain.setTargetAtTime(0.004+dispersSmooth*0.01,now,0.2);
+    v.agentId=a?a.id:-1;
+  });
+
+  // display
+  updateKeyboard(noteCounts);
+  const allM=[...noteCounts.keys()];
+  if(allM.length){
+    const avg=Math.round(allM.reduce((a,b)=>a+b,0)/allM.length);
+    document.getElementById('avgNoteStat').textContent=COQ_NOTES[coqTonic]+(coqScale===SMAJ?' May':coqScale===SMIN?' Men':coqScale===SMIXO?' Mix':' Pen');
+    document.getElementById('valSound').textContent=COQ_NOTES[coqTonic];
+    document.getElementById('barSound').style.width=Math.min(100,coqTonic/11*100)+'%';
+  }
+  document.getElementById('voicesStat').textContent=voices.filter(v=>v.gain.gain.value>0.002).length;
+}
+
+
+// ── SONIC VISUALIZER ──
+function drawSonicViz(){
+  sctx.clearRect(0,0,sonicCanvas.width,sonicCanvas.height);
+  if(!analyser||!audioRunning)return;
+  analyser.getByteFrequencyData(analyserData);
+  const n=analyserData.length,W=sonicCanvas.width,H=sonicCanvas.height;
+  const barW=Math.max(2,Math.floor(W*0.8/n)),startX=W*0.1,maxH=H*0.18,y0=H-8;
+  for(let i=0;i<n;i++){
+    const v=analyserData[i]/255;const h=v*maxH;if(h<1)continue;
+    const hue=270-externalSolarBoost*160;
+    sctx.fillStyle=`hsla(${hue},80%,${40+v*40}%,0.85)`;
+    sctx.fillRect(startX+i*(barW+1),y0-h,barW,h);
+  }
+  sctx.beginPath();
+  sctx.strokeStyle=`rgba(${168+Math.round(externalSolarBoost*87)},${85+Math.round(externalSolarBoost*170)},${Math.round(247-externalSolarBoost*200)},0.6)`;
+  sctx.lineWidth=1.5;let first=true;
+  for(let i=0;i<n;i++){
+    const v=analyserData[i]/255,x=startX+i*(barW+1)+barW/2,y=y0-v*maxH;
+    if(first){sctx.moveTo(x,y);first=false;}else sctx.lineTo(x,y);
+  }
+  sctx.stroke();
+}
+
+// ── SOLAR UI ──
+function updateSolarUI(v){
+  document.getElementById("barSolar").style.width=(v*100)+"%";
+  document.getElementById("valSolar").textContent=v.toFixed(2);
+  document.getElementById("valSolarDemo").textContent=Math.round(v*100)+"%";
+  const intensity=v*0.25;
+  solarOverlay.style.background=`radial-gradient(ellipse at center,rgba(255,220,0,${intensity}) 0%,rgba(255,140,0,${intensity*0.5}) 45%,transparent 72%)`;
+  solarOverlay.style.opacity=v>0.01?"1":"0";
+  document.getElementById("dotSolar").className=v>0.05?"status-dot active":"status-dot inactive";
+  document.getElementById("lblSolar").textContent=v>0.05?`Solar: ${Math.round(v*100)}% activo`:"Solar cell: simulated";
+  const imp=document.getElementById("solar-impact");
+  if(v<0.1){imp.className="";imp.textContent="Oscuro → octavas C2–C4 · filtro cerrado · ruido denso grave";}
+  else if(v<0.35){imp.className="";imp.textContent=`☀ ${Math.round(v*100)}% → espectro subiendo · filtro abriendo`;}
+  else if(v<0.65){imp.className="bright";imp.textContent=`☀ ${Math.round(v*100)}% → C4–C6 · brillo medio · harmonía abierta`;}
+  else{imp.className="bright";imp.textContent=`☀☀ ${Math.round(v*100)}% → C5–C8 · TODO EL ESPECTRO ABIERTO · fortísimo`;}
+}
+document.getElementById("solarDemo").addEventListener("input",e=>{
+  if(!ws||ws.readyState!==WebSocket.OPEN){externalSolarBoost=e.target.value/100;updateSolarUI(externalSolarBoost);}
+});
+
+// ── WEBSOCKET ──
+let ws=null;
+function connectWS(){
+  try{
+    ws=new WebSocket("ws://localhost:8765");
+    ws.onopen=()=>{wsStatus.textContent="WS: connected";wsStatus.className="connected";};
+    ws.onmessage=e=>{const val=parseFloat(e.data);if(!isNaN(val)){externalSolarBoost=Math.max(0,Math.min(1,val));document.getElementById("solarDemo").value=Math.round(externalSolarBoost*100);updateSolarUI(externalSolarBoost);}};
+    ws.onclose=()=>{wsStatus.textContent="WS: disconnected";wsStatus.className="";setTimeout(connectWS,3000);};
+    ws.onerror=()=>ws.close();
+  }catch(e){}
+}
+connectWS();
+
+// ── SCALE BUTTONS ──
+document.querySelectorAll(".scale-btn").forEach(b=>{
+  b.addEventListener("click",()=>{
+    currentScale=b.dataset.scale;
+    document.querySelectorAll(".scale-btn").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+  });
+});
+
+// ── AUDIO BUTTON ──
+document.getElementById("audioStartBtn").addEventListener("click",()=>{
+  if(!audioRunning){initAudio();if(audioCtx.state==="suspended")audioCtx.resume();}
+  else{
+    audioRunning=false;
+    for(const v of voices)v.gain.gain.setTargetAtTime(0,audioCtx.currentTime,0.2);
+    document.getElementById("audioStartBtn").textContent="▶ ACTIVAR AUDIO (A)";
+    document.getElementById("audioStartBtn").classList.remove("active");
+    document.getElementById("dotAudio").className="status-dot inactive";
+    document.getElementById("lblAudio").textContent="Audio: stopped";
+  }
+});
+window.addEventListener("keydown",e=>{if(e.key==="a"||e.key==="A")document.getElementById("audioStartBtn").click();});
+
+// Sound panel collapse
+const soundBody=document.getElementById("soundPanelBody");
+const soundArrow=document.getElementById("soundToggleArrow");
+document.getElementById("soundPanelToggle").addEventListener("click",()=>{
+  soundBody.classList.toggle("collapsed");
+  soundArrow.textContent=soundBody.classList.contains("collapsed")?"▼":"▲";
+});
+
+// sync sliders
+[["masterVol","valMasterVol",v=>v+"%"],
+ ["octMin","valOctMin",v=>"C"+v],
+ ["octMax","valOctMax",v=>"C"+v],
+ ["voiceCount","valVoiceCount",v=>v],
+ ["detuneAmt","valDetuneAmt",v=>v+"¢"],
+ ["solarSoundBoost","valSolarSoundBoost",v=>parseFloat(v).toFixed(1)+"×"],
+ ["lfoRate","valLfoRate",v=>parseFloat(v).toFixed(2)],
+ ["reverbMix","valReverbMix",v=>v+"%"]
+].forEach(([id,valId,fmt])=>{
+  const el=document.getElementById(id),val=document.getElementById(valId);
+  if(!el||!val)return;
+  val.textContent=fmt(el.value);
+  el.addEventListener("input",()=>{val.textContent=fmt(el.value);});
+});
+document.getElementById("voiceCount").addEventListener("input",e=>{
+  if(audioCtx&&audioRunning)buildVoicePool(parseInt(e.target.value));
+});
+
+// ── TOUCH/MOUSE ──
+function canvasToGrid(cx,cy){const rect=canvas.getBoundingClientRect();return{gx:(cx-rect.left)/rect.width*state.gridSize,gy:(cy-rect.top)/rect.height*state.gridSize};}
+function setAttractor(clientX,clientY,active){
+  const rect=canvas.getBoundingClientRect();attractorActive=active;
+  if(active){
+    const{gx,gy}=canvasToGrid(clientX,clientY);attractorX=gx;attractorY=gy;
+    touchRing.style.left=(clientX-rect.left)+"px";touchRing.style.top=(clientY-rect.top)+"px";
+    const size=Number(document.getElementById("attractorRadius").value)*(canvas.width/state.gridSize)*2;
+    touchRing.style.width=size+"px";touchRing.style.height=size+"px";touchRing.style.opacity="1";
+    document.getElementById("dotTouch").className="status-dot active";
+    document.getElementById("lblTouch").textContent=`Touch: (${Math.round(gx)}, ${Math.round(gy)})`;
+    document.getElementById("barTouch").style.width="80%";
+    document.getElementById("valTouch").textContent=`${Math.round(gx)},${Math.round(gy)}`;
+  } else {
+    attractorX=-1;attractorY=-1;holdTimer=0;touchRing.style.opacity="0";
+    document.getElementById("dotTouch").className="status-dot inactive";
+    document.getElementById("lblTouch").textContent="No touch detected";
+    document.getElementById("barTouch").style.width="0%";
+    document.getElementById("valTouch").textContent="—";
+  }
+}
+canvas.addEventListener("mousemove",e=>setAttractor(e.clientX,e.clientY,true));
+canvas.addEventListener("mouseleave",()=>setAttractor(0,0,false));
+canvas.addEventListener("mousedown",e=>{holdTimer=0;setAttractor(e.clientX,e.clientY,true);});
+canvas.addEventListener("mouseup",()=>{holdTimer=0;});
+canvas.addEventListener("touchstart",e=>{e.preventDefault();const t=e.touches[0];setAttractor(t.clientX,t.clientY,true);},{passive:false});
+canvas.addEventListener("touchmove",e=>{e.preventDefault();const t=e.touches[0];setAttractor(t.clientX,t.clientY,true);},{passive:false});
+canvas.addEventListener("touchend",()=>setAttractor(0,0,false));
+window.addEventListener("keydown",e=>{
+  if(e.key==="1")setView("density");if(e.key==="2")setView("energy");
+  if(e.key==="3")setView("organic");if(e.key==="4")setView("lineage");if(e.key==="5")setView("height");
+  if(e.key==="r"||e.key==="R"){zoom=1;offsetX=0;offsetY=0;}
+  if(e.key===" "){state.running=!state.running;document.getElementById("pauseBtn").textContent=state.running?"Pause":"Resume";}
+});
+let zoom=1,offsetX=0,offsetY=0;
+canvas.addEventListener("wheel",e=>{e.preventDefault();zoom*=e.deltaY>0?0.9:1.1;zoom=Math.max(0.3,Math.min(8,zoom));});
+
+// ── UI ──
+const ui={
+  agents:document.getElementById("agents"),grid:document.getElementById("grid"),cycles:document.getElementById("cycles"),
+  period:document.getElementById("period"),amplitude:document.getElementById("amplitude"),
+  basal:document.getElementById("basal"),gain:document.getElementById("gain"),
+  maxpop:document.getElementById("maxpop"),baseConception:document.getElementById("baseConception"),
+  matingRadius:document.getElementById("matingRadius"),gestation:document.getElementById("gestation"),
+  pregCost:document.getElementById("pregCost"),renderEvery:document.getElementById("renderEvery"),
+  organicUptake:document.getElementById("organicUptake"),densityPenalty:document.getElementById("densityPenalty"),
+  attractorStr:document.getElementById("attractorStr"),solarBoostMult:document.getElementById("solarBoostMult"),
+  attractorRadius:document.getElementById("attractorRadius"),repulseOnHold:document.getElementById("repulseOnHold"),
+  pauseBtn:document.getElementById("pauseBtn"),restartBtn:document.getElementById("restartBtn"),snapshotBtn:document.getElementById("snapshotBtn"),
+  labAgents:document.getElementById("labAgents"),labGrid:document.getElementById("labGrid"),labCycles:document.getElementById("labCycles"),
+  tickStat:document.getElementById("tickStat"),aliveStat:document.getElementById("aliveStat"),
+  birthStat:document.getElementById("birthStat"),deathStat:document.getElementById("deathStat"),
+  energyStat:document.getElementById("energyStat"),pulseStat:document.getElementById("pulseStat")
+};
+function syncLabels(){ui.labAgents.textContent=ui.agents.value;ui.labGrid.textContent=ui.grid.value+"×"+ui.grid.value;ui.labCycles.textContent=ui.cycles.value;}
+["input","change"].forEach(evt=>[ui.agents,ui.grid,ui.cycles].forEach(el=>el.addEventListener(evt,syncLabels)));syncLabels();
+let VIEW="density";
+const modeBtns=[...document.querySelectorAll(".mode-btn")];
+function setView(mode){VIEW=mode;modeBtns.forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));}
+modeBtns.forEach(b=>b.addEventListener("click",()=>setView(b.dataset.mode)));
+
+// ── SIMULATION ──
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rand=(a,b)=>a+Math.random()*(b-a);
+let state={running:true,tick:0,nextId:1,nextLineage:100000,gridSize:180,agents:[],births:0,deaths:0,aliveCount:0,pulseValue:0,densityField:null,energyField:null,energySumField:null,organicFieldA:null,organicFieldB:null,organicField:null,lineageField:null,neighborField:null,history:[],pregnantCount:0,lineageCount:0,avgEnergy:0};
+let off=document.createElement("canvas"),offctx=off.getContext("2d");
+function idx(x,y){return y*state.gridSize+x;}
+function makeFields(n){
+  const len=n*n;
+  state.densityField=new Float32Array(len);state.energyField=new Float32Array(len);state.energySumField=new Float32Array(len);
+  state.organicFieldA=new Float32Array(len);state.organicFieldB=new Float32Array(len);state.organicField=state.organicFieldA;
+  state.lineageField=new Float32Array(len);state.neighborField=new Float32Array(len);
+  off.width=n;off.height=n;
+}
+function createAgent(x,y,lineage){return{id:state.nextId++,x:clamp(x,0,state.gridSize-1.001),y:clamp(y,0,state.gridSize-1.001),energy:55+Math.random()*10,age:0,alive:true,gestating:false,gestationTimer:0,partnerRef:0,lineage:lineage,type:0};}
+function resetSimulation(){
+  state.tick=0;state.nextId=1;state.nextLineage=100000;state.births=0;state.deaths=0;state.aliveCount=0;state.history=[];
+  state.gridSize=Number(ui.grid.value);state.agents=[];makeFields(state.gridSize);
+  const g=state.gridSize,n=Number(ui.agents.value);
+  for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,r=Math.random()*(g*0.12);state.agents.push(createAgent(g/2+Math.cos(a)*r,g/2+Math.sin(a)*r,i+1));}
+  state.aliveCount=state.agents.length;computeFields();refreshStats();
+}
+function solar(x,y){const g=state.gridSize;return Math.max(0,1-Math.hypot(x-g/2,y-g/2)/(g*0.60));}
+function depositBilinear(field,x,y,amount){
+  const g=state.gridSize,x0=clamp(Math.floor(x),0,g-1),y0=clamp(Math.floor(y),0,g-1);
+  const x1=Math.min(x0+1,g-1),y1=Math.min(y0+1,g-1),fx=x-x0,fy=y-y0;
+  field[idx(x0,y0)]+=amount*(1-fx)*(1-fy);field[idx(x1,y0)]+=amount*fx*(1-fy);
+  field[idx(x0,y1)]+=amount*(1-fx)*fy;field[idx(x1,y1)]+=amount*fx*fy;
+}
+function computeFields(){
+  state.densityField.fill(0);state.energyField.fill(0);state.energySumField.fill(0);state.lineageField.fill(0);state.neighborField.fill(0);
+  const lw=new Map();
+  for(const a of state.agents){
+    if(!a.alive)continue;
+    depositBilinear(state.densityField,a.x,a.y,1);depositBilinear(state.energySumField,a.x,a.y,a.energy);
+    const ix=clamp(Math.floor(a.x),0,state.gridSize-1),iy=clamp(Math.floor(a.y),0,state.gridSize-1),k=idx(ix,iy);
+    const prev=lw.get(k);if(!prev)lw.set(k,{lineage:a.lineage,count:1});else if(prev.lineage===a.lineage)prev.count++;else prev.count--;
+  }
+  for(let i=0;i<state.energyField.length;i++)if(state.densityField[i]>0.00001)state.energyField[i]=state.energySumField[i]/state.densityField[i];
+  const g=state.gridSize;
+  for(let y=1;y<g-1;y++)for(let x=1;x<g-1;x++){
+    const i=idx(x,y);
+    state.neighborField[i]=state.densityField[i]+state.densityField[idx(x-1,y)]+state.densityField[idx(x+1,y)]+state.densityField[idx(x,y-1)]+state.densityField[idx(x,y+1)]+state.densityField[idx(x-1,y-1)]*0.707+state.densityField[idx(x+1,y-1)]*0.707+state.densityField[idx(x-1,y+1)]*0.707+state.densityField[idx(x+1,y+1)]*0.707;
+  }
+  for(const[k,v]of lw.entries())state.lineageField[k]=v.lineage;
+}
+function diffuseOrganic(){
+  const g=state.gridSize,src=state.organicField,out=src===state.organicFieldA?state.organicFieldB:state.organicFieldA;
+  out.fill(0);
+  for(let y=1;y<g-1;y++)for(let x=1;x<g-1;x++){
+    const i=idx(x,y);
+    out[i]=(src[i]*0.60+src[idx(x-1,y)]*0.07+src[idx(x+1,y)]*0.07+src[idx(x,y-1)]*0.07+src[idx(x,y+1)]*0.07+src[idx(x-1,y-1)]*0.03+src[idx(x+1,y-1)]*0.03+src[idx(x-1,y+1)]*0.03+src[idx(x+1,y+1)]*0.03)*0.998;
+  }
+  state.organicField=out;
+}
+function lineageColor(l){if(l<=0)return[0,0,0];return[(l*97)%255,(l*57)%255,(l*137)%255];}
+function densityColor(d){if(d<=0)return[0,0,0];if(d<1.5)return[90,0,130];if(d<3.5)return[110,90,255];if(d<7)return[255,160,0];return[255,30,0];}
+function energyColor(e){if(e<=0)return[0,0,0];const t=clamp(e/140,0,1.6);if(t<0.25)return[30,0,70];if(t<0.5)return[90,30,170];if(t<0.9)return[180,120,255];if(t<1.2)return[255,220,120];return[255,255,255];}
+function organicColor(o){if(o<=0.001)return[0,0,0];const t=clamp(o/25,0,1.2);return[Math.floor(20+50*t),Math.floor(70+170*t),Math.floor(20+40*t)];}
+function heightColor(v,x,y){const left=x>0?state.densityField[idx(x-1,y)]:v,up=y>0?state.densityField[idx(x,y-1)]:v,shade=clamp(140+(v-left)*18+(v-up)*18,30,255),warm=clamp(v*25,0,255);return[shade,Math.floor(shade*0.7),Math.floor(255-warm*0.6)];}
+function render(){
+  if(state.tick%Number(ui.renderEvery.value)!==0)return;
+  const g=state.gridSize,image=ctx.createImageData(g,g),data=image.data;
+  const aRad=Number(ui.attractorRadius.value);
+  for(let y=0;y<g;y++)for(let x=0;x<g;x++){
+    const i=idx(x,y),p=i*4;
+    let col=[0,0,0];
+    if(VIEW==="density")col=densityColor(state.densityField[i]);
+    else if(VIEW==="energy")col=energyColor(state.energyField[i]);
+    else if(VIEW==="organic")col=organicColor(state.organicField[i]);
+    else if(VIEW==="lineage")col=lineageColor(state.lineageField[i]);
+    else if(VIEW==="height")col=heightColor(state.densityField[i],x,y);
+    if(attractorActive&&attractorX>=0){
+      const ad=Math.sqrt((x-attractorX)**2+(y-attractorY)**2);
+      if(ad<aRad){const glow=clamp(1-ad/aRad,0,1)*0.5;const rep=Number(ui.repulseOnHold.value)>0&&holdTimer>60;col[0]=Math.min(255,col[0]+(rep?255*glow:0));col[1]=Math.min(255,col[1]+(rep?0:180*glow));col[2]=Math.min(255,col[2]+(rep?0:255*glow));}
+    }
+    if(externalSolarBoost>0.05){col[0]=Math.min(255,col[0]+clamp(externalSolarBoost*95,0,255));col[1]=Math.min(255,col[1]+clamp(externalSolarBoost*75,0,255));}
+    data[p]=col[0];data[p+1]=col[1];data[p+2]=col[2];data[p+3]=255;
+  }
+  offctx.putImageData(image,0,0);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.imageSmoothingEnabled=false;
+  ctx.setTransform(zoom,0,0,zoom,offsetX,offsetY);
+  ctx.drawImage(off,0,0,canvas.width,canvas.height);
+  ctx.setTransform(1,0,0,1,0,0);
+  drawSonicViz();
+}
+function chooseType(d,p){if(d<=1)return 1;if(d>=7)return 3;if(p>0.15)return 2;return 0;}
+function buildBuckets(radius){
+  const cellSize=Math.max(1,radius),buckets=new Map();
+  for(const a of state.agents){if(!a.alive)continue;const bx=Math.floor(a.x/cellSize),by=Math.floor(a.y/cellSize),key=bx+","+by;let arr=buckets.get(key);if(!arr){arr=[];buckets.set(key,arr);}arr.push(a);}
+  return{buckets,cellSize};
+}
+function tryKill(a){if(!a.alive)return;a.alive=false;a.gestating=false;a.partnerRef=0;state.deaths++;state.aliveCount--;state.organicField[idx(Math.floor(a.x),Math.floor(a.y))]+=Math.max(5,a.energy+18);}
+function spawnChild(parent,partner){
+  if(state.aliveCount>=Number(ui.maxpop.value))return false;
+  const child=createAgent(parent.x+rand(-2.5,2.5),parent.y+rand(-2.5,2.5),Math.random()<0.5?parent.lineage:partner.lineage);
+  if(Math.random()<0.002)child.lineage=state.nextLineage++;
+  child.energy=35+Math.random()*10;state.agents.push(child);state.births++;state.aliveCount++;return true;
+}
+function stepModel(){
+  const T=Number(ui.period.value),A=Number(ui.amplitude.value),basalBase=Number(ui.basal.value),gainBase=Number(ui.gain.value);
+  const organicUptake=Number(ui.organicUptake.value),densityPenalty=Number(ui.densityPenalty.value);
+  const pregCost=Number(ui.pregCost.value),gestationTicks=Number(ui.gestation.value);
+  const baseConception=Number(ui.baseConception.value),radius=Number(ui.matingRadius.value),maxpop=Number(ui.maxpop.value);
+  const aStr=Number(ui.attractorStr.value),solarBoostMult=Number(ui.solarBoostMult.value),aRad=Number(ui.attractorRadius.value);
+  const repulseMode=Number(ui.repulseOnHold.value)>0&&holdTimer>60;
+  const touchEnergyInject=Number(document.getElementById("touchEnergyInject").value)||3;
+  const pulseValue=A*Math.sin(2*Math.PI*state.tick/T);
+  state.pulseValue=pulseValue;
+  if(attractorActive)holdTimer++;
+  computeFields();
+  for(const a of state.agents){
+    if(!a.alive)continue;
+    const ix=clamp(Math.floor(a.x),0,state.gridSize-1),iy=clamp(Math.floor(a.y),0,state.gridSize-1),i=idx(ix,iy),localD=state.neighborField[i];
+    a.type=chooseType(localD,pulseValue);
+    let basal=basalBase*(1+0.7*Math.max(0,pulseValue));
+    let solarGain=gainBase*(1+0.45*Math.max(0,-pulseValue))*(1+externalSolarBoost*solarBoostMult);
+    let organicGain=state.organicField[i]*organicUptake,densityCost=Math.max(0,localD-8)*densityPenalty;
+    a.energy-=basal+densityCost;a.energy+=solar(a.x,a.y)*solarGain+organicGain;
+    state.organicField[i]=Math.max(0,state.organicField[i]-organicGain*0.65);a.age+=1;
+    const g=state.gridSize,cx=g/2,cy=g/2,dx=cx-a.x,dy=cy-a.y,d=Math.max(1,Math.hypot(dx,dy));
+    let vx=dx/d*0.25,vy=dy/d*0.25;
+    if(a.type===1||localD>10){const repel=0.45+0.06*Math.min(localD,12);vx-=dx/d*repel;vy-=dy/d*repel;}
+    if(attractorActive&&attractorX>=0){
+      const adx=attractorX-a.x,ady=attractorY-a.y,ad=Math.max(1,Math.hypot(adx,ady));
+      if(ad<aRad*2){
+        const falloff=clamp(1-ad/(aRad*2),0,1),force=aStr*falloff;
+        if(repulseMode){vx-=(adx/ad)*force;vy-=(ady/ad)*force;}
+        else{vx+=(adx/ad)*force;vy+=(ady/ad)*force;}
+        // ── ENERGY INJECTION: touch raises agent energy → raises their note ──
+        // Inner zone (ad < aRad): strong injection, outer zone: gentle
+        const energyZone = ad < aRad ? falloff*2 : falloff*0.5;
+        const touchEnergyBoost = energyZone * touchEnergyInject;
+        a.energy = Math.min(a.energy + touchEnergyBoost, 160); // cap at max note range
+      }
+    }
+    const noiseAngle=Math.random()*Math.PI*2,noiseMag=Math.random()*0.8;
+    vx+=Math.cos(noiseAngle)*noiseMag;vy+=Math.sin(noiseAngle)*noiseMag;
+    a.x=clamp(a.x+vx,0,g-1.001);a.y=clamp(a.y+vy,0,g-1.001);
+    if(a.gestating){a.gestationTimer--;a.energy-=0.03*pregCost;}
+    if(a.energy<=0||a.age>1800)tryKill(a);
+  }
+  const logisticFactor=clamp(1-state.aliveCount/maxpop,0.02,1),spatial=buildBuckets(radius),radiusSq=radius*radius,seen=new Set();
+  for(const a of state.agents){
+    if(!a.alive||a.gestating||a.energy<32||a.age<40)continue;
+    const bx=Math.floor(a.x/spatial.cellSize),by=Math.floor(a.y/spatial.cellSize);let mated=false;
+    for(let oy=-1;oy<=1&&!mated;oy++)for(let ox=-1;ox<=1&&!mated;ox++){
+      const arr=spatial.buckets.get((bx+ox)+","+(by+oy));if(!arr)continue;
+      for(const b of arr){
+        if(a.id===b.id||!b.alive||b.gestating||b.energy<32||b.age<40)continue;
+        const low=Math.min(a.id,b.id),high=Math.max(a.id,b.id),key=low+":"+high;
+        if(seen.has(key))continue;seen.add(key);
+        const ddx=a.x-b.x,ddy=a.y-b.y;if(ddx*ddx+ddy*ddy>radiusSq)continue;
+        const ai=idx(clamp(Math.floor(a.x),0,state.gridSize-1),clamp(Math.floor(a.y),0,state.gridSize-1));
+        const bi=idx(clamp(Math.floor(b.x),0,state.gridSize-1),clamp(Math.floor(b.y),0,state.gridSize-1));
+        const localPenalty=clamp(1-(state.neighborField[ai]+state.neighborField[bi])/40,0.08,1);
+        const sameLineageBias=a.lineage===b.lineage?1.08:0.96;
+        const p=baseConception*localPenalty*logisticFactor*sameLineageBias*(1-0.35*Math.max(0,pulseValue));
+        if(Math.random()<p){const carrier=Math.random()<0.5?a:b,partner=carrier===a?b:a;carrier.gestating=true;carrier.gestationTimer=gestationTicks;carrier.partnerRef=partner.id;carrier.energy-=pregCost;mated=true;break;}
+      }
+    }
+  }
+  const idMap=new Map();for(const a of state.agents)idMap.set(a.id,a);
+  for(const a of state.agents){if(!a.alive||!a.gestating)continue;if(a.gestationTimer<=0){const partner=idMap.get(a.partnerRef);spawnChild(a,partner&&partner.alive?partner:a);a.gestating=false;a.partnerRef=0;}}
+  if(state.tick%200===0)state.agents=state.agents.filter(a=>a.alive);
+  if(state.tick%100===0)state.history.push({tick:state.tick,alive:state.aliveCount,births:state.births,deaths:state.deaths,avgEnergy:state.avgEnergy.toFixed(2),solar:externalSolarBoost.toFixed(3),pulseValue:state.pulseValue.toFixed(3)});
+  if(state.tick%5===0)updateVoices();
+  diffuseOrganic();state.tick++;
+}
+function refreshStats(){
+  let energySum=0;
+  for(const a of state.agents){if(!a.alive)continue;energySum+=a.energy;}
+  state.avgEnergy=state.aliveCount?energySum/state.aliveCount:0;
+}
+function updateStats(){
+  ui.tickStat.textContent=state.tick;ui.aliveStat.textContent=state.aliveCount;
+  ui.birthStat.textContent=state.births;ui.deathStat.textContent=state.deaths;
+  ui.energyStat.textContent=state.avgEnergy.toFixed(1);ui.pulseStat.textContent=state.pulseValue.toFixed(3);
+  const pn=(state.pulseValue+0.5)/1;
+  document.getElementById("barPulse").style.width=clamp(pn*100,0,100)+"%";
+  document.getElementById("valPulse").textContent=state.pulseValue.toFixed(2);
+}
+function loop(){
+  try{if(state.running){const c=Number(ui.cycles.value);for(let i=0;i<c;i++)stepModel();}computeFields();if(state.tick%8===0)refreshStats();render();updateStats();}
+  catch(err){console.error(err);state.running=false;ui.pauseBtn.textContent="Resume";}
+  requestAnimationFrame(loop);
+}
+ui.pauseBtn.addEventListener("click",()=>{state.running=!state.running;ui.pauseBtn.textContent=state.running?"Pause":"Resume";});
+ui.restartBtn.addEventListener("click",()=>{resetSimulation();state.running=true;ui.pauseBtn.textContent="Pause";});
+ui.snapshotBtn.addEventListener("click",()=>{const a=document.createElement("a");a.href=canvas.toDataURL("image/png");a.download="heartbeat_v18_tick"+state.tick+".png";a.click();});
+resetSimulation();loop();
+})();
+</script>
+</body>
+</html>
